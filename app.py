@@ -80,13 +80,25 @@ if api_key:
     conversation_input = st.text_input("Enter your message:")
     if st.button("Send Message"):
         if conversation_input and selected_agent:
-            # Run conversation with the selected agent
-            agent = st.session_state["agents"][selected_agent]
-            client = Swarm()
-            response = client.run(agent=agent, messages=[{"role": "user", "content": conversation_input}])
-            st.session_state["history"].append({"role": "user", "content": conversation_input})
-            st.session_state["history"].append({"role": agent.name, "content": response.messages[-1]["content"]})
-            st.write(f"{agent.name} says: {response.messages[-1]['content']}")
+            # Validate input message structure
+            messages = [{"role": "user", "content": conversation_input}]
+            if all(isinstance(msg.get("role"), str) and isinstance(msg.get("content"), str) for msg in messages):
+                # Run conversation with the selected agent
+                agent = st.session_state["agents"][selected_agent]
+                client = Swarm()
+                try:
+                    response = client.run(agent=agent, messages=messages)
+                    # Log response to check structure
+                    st.write("API Response:", response)
+
+                    # Update conversation history with valid response
+                    st.session_state["history"].append({"role": "user", "content": conversation_input})
+                    st.session_state["history"].append({"role": agent.name, "content": response.messages[-1]["content"]})
+                    st.write(f"{agent.name} says: {response.messages[-1]['content']}")
+                except Exception as e:
+                    st.error(f"An error occurred during the API request: {e}")
+            else:
+                st.error("Invalid message format. Messages must have 'role' and 'content' keys with string values.")
 
     # Display conversation history
     st.subheader("Conversation History")
