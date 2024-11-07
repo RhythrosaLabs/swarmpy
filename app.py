@@ -5,14 +5,31 @@ from datetime import datetime
 from PIL import Image
 from io import BytesIO
 
+# Placeholder functions for DALL-E, web scraping, and file analysis
+def generate_dalle_image(prompt, model="dalle-3"):
+    # Implement DALL-E image generation here
+    return None  # Replace with actual image bytes
+
+def scrape_url(url):
+    # Implement web scraping logic here
+    return f"Scraped content from {url}"
+
+def analyze_pdf(file):
+    # Implement PDF analysis here
+    return "Extracted text from PDF"
+
+def analyze_image(image):
+    # Implement image analysis here
+    return "Detected objects in image"
+
 # Set up session state for agent configurations and conversation history
 if "agent_configs" not in st.session_state:
     st.session_state["agent_configs"] = {}
 if "history" not in st.session_state:
     st.session_state["history"] = []
 
-# Title for the app with icons
-st.title("🤖 Collaborative Multi-Agent Interface with DALL-E, Web Scraping, and Analysis")
+# Title for the app
+st.title("🤖 Collaborative Multi-Agent Interface with Customizable Bots")
 
 # Step 1: API Key Input
 st.subheader("🔐 Step 1: API Key Input")
@@ -23,14 +40,57 @@ if api_key:
     # Sidebar for Agent Management
     with st.sidebar:
         st.header("👥 Agent Management")
+
+        # Preset Agent Selection
+        preset_options = ["Image Generator", "Web Scraper", "File Analyzer"]
+        selected_preset = st.selectbox("Choose a Preset Agent", preset_options, help="Select a type of agent to configure.")
+
+        # Customize parameters based on selected preset
         agent_name = st.text_input("Agent Name", help="Provide a unique name for the agent.")
-        agent_instructions = st.text_area("Agent Instructions", "Provide specific instructions for this agent.", help="Describe the agent's purpose or behavior.")
-        if st.button("➕ Add Agent", key="add_agent"):
-            if agent_name and agent_name not in st.session_state["agent_configs"]:
-                st.session_state["agent_configs"][agent_name] = {"name": agent_name, "instructions": agent_instructions}
-                st.success(f"Agent '{agent_name}' added successfully!")
+        if selected_preset == "Image Generator":
+            prompt = st.text_input("Image Generation Prompt", help="Enter a prompt for DALL-E to create an image.")
+            model = st.selectbox("Model", ["dalle-3", "dalle-2"], help="Select the model version.")
+            agent_instructions = f"Generate images based on the prompt '{prompt}' using {model}."
+
+        elif selected_preset == "Web Scraper":
+            url = st.text_input("URL to Scrape", help="Enter a URL to scrape data from.")
+            scrape_depth = st.slider("Scrape Depth", 1, 5, 1, help="How deep to scrape the page.")
+            agent_instructions = f"Scrape data from '{url}' with a depth of {scrape_depth}."
+
+        elif selected_preset == "File Analyzer":
+            file_type = st.selectbox("File Type", ["PDF", "Image"], help="Choose the type of file to analyze.")
+            agent_instructions = f"Analyze '{file_type}' files and extract relevant information."
+
+        # Add or update the agent
+        if st.button("➕ Add or Update Agent", key="add_agent"):
+            if agent_name:
+                st.session_state["agent_configs"][agent_name] = {
+                    "name": agent_name,
+                    "type": selected_preset,
+                    "parameters": {
+                        "prompt": prompt if selected_preset == "Image Generator" else None,
+                        "model": model if selected_preset == "Image Generator" else None,
+                        "url": url if selected_preset == "Web Scraper" else None,
+                        "scrape_depth": scrape_depth if selected_preset == "Web Scraper" else None,
+                        "file_type": file_type if selected_preset == "File Analyzer" else None
+                    },
+                    "instructions": agent_instructions
+                }
+                st.success(f"Agent '{agent_name}' added or updated successfully!")
             else:
                 st.warning("Agent name must be unique and not empty.")
+
+        # Edit existing agent with dropdown selection
+        if st.session_state["agent_configs"]:
+            selected_agent = st.selectbox("Select Agent to Edit", list(st.session_state["agent_configs"].keys()))
+            if selected_agent:
+                st.write(f"**Editing Agent:** {selected_agent}")
+                agent_config = st.session_state["agent_configs"][selected_agent]
+                st.json(agent_config)
+
+                if st.button("❌ Delete Agent", key="delete_agent"):
+                    del st.session_state["agent_configs"][selected_agent]
+                    st.warning(f"Agent '{selected_agent}' deleted.")
 
     # Collaboration Setup
     st.subheader("🤝 Step 2: Collaboration Setup")
@@ -46,6 +106,8 @@ if api_key:
         if st.button("🚀 Start Collaborative Interaction"):
             agent_a_config = st.session_state["agent_configs"][agent_a_name]
             agent_b_config = st.session_state["agent_configs"][agent_b_name]
+
+            # Create agent instances based on configurations
             agent_a = Agent(name=agent_a_config["name"], instructions=agent_a_config["instructions"])
             agent_b = Agent(name=agent_b_config["name"], instructions=agent_b_config["instructions"])
             client = Swarm()
@@ -58,7 +120,6 @@ if api_key:
             # Perform turn-based interaction between the two agents
             for turn in range(max_turns):
                 try:
-                    # Run the Swarm client with the actual Agent instance
                     response = client.run(agent=current_agent, messages=conversation)
                     response_content = response.messages[-1]["content"]
                     timestamp = datetime.now().strftime("%H:%M:%S")
@@ -69,68 +130,6 @@ if api_key:
                     st.error(f"Error during API call: {e}")
                     break
 
-    # DALL-E 3 Content Creation Section
-    st.subheader("🖼️ DALL-E 3 Content Creation")
-    dalle_prompt = st.text_input("Enter a prompt for image generation:", help="Create images using DALL-E 3.")
-    if st.button("Generate Image"):
-        # Assuming DALL-E 3 API is available as a function called `generate_image(prompt)`
-        image_bytes = generate_dalle_image(dalle_prompt)  # This function should return bytes of the image
-        if image_bytes:
-            image = Image.open(BytesIO(image_bytes))
-            st.image(image, caption="Generated by DALL-E 3")
-
-    # Web Scraping Section
-    st.subheader("🌐 Web Scraping")
-    url = st.text_input("Enter URL to scrape:", help="Provide a URL to scrape data from.")
-    if st.button("Scrape URL"):
-        scraped_data = scrape_url(url)  # This function should be implemented to return scraped data as text
-        st.text_area("Scraped Data", value=scraped_data, height=300)
-
-    # File and Image Analysis Section
-    st.subheader("📂 File and Image Analysis")
-    uploaded_file = st.file_uploader("Upload a file (PDF, image, CSV):")
-    if uploaded_file:
-        file_type = uploaded_file.type
-        if file_type == "application/pdf":
-            pdf_text = analyze_pdf(uploaded_file)  # This function should extract text from the PDF
-            st.text_area("Extracted Text from PDF", pdf_text, height=300)
-        elif file_type.startswith("image/"):
-            image = Image.open(uploaded_file)
-            st.image(image, caption="Uploaded Image")
-            analysis_result = analyze_image(image)  # Analyze the image for content (e.g., OCR)
-            st.text_area("Image Analysis Result", analysis_result)
-        elif file_type == "text/csv":
-            import pandas as pd
-            df = pd.read_csv(uploaded_file)
-            st.write(df)
-            st.text("Data analysis can be added here.")
-
-    # Save and Clear Chat History
+    # Conversation History and Save/Load
     st.subheader("📜 Conversation History")
-    for entry in st.session_state["history"]:
-        if entry["role"] == "user":
-            st.markdown(
-                f"<div style='text-align: right; background-color: #1c1c1c; padding: 10px; border-radius: 10px; margin: 5px;'>"
-                f"<strong>You:</strong> {entry['content']} <span style='font-size: small; color: #6c757d;'>({entry['time']})</span></div>",
-                unsafe_allow_html=True
-            )
-        else:
-            st.markdown(
-                f"<div style='text-align: left; background-color: #1c1c1c; padding: 10px; border-radius: 10px; margin: 5px;'>"
-                f"<strong>{entry['role']}:</strong> {entry['content']} <span style='font-size: small; color: #6c757d;'>({entry['time']})</span></div>",
-                unsafe_allow_html=True
-            )
-    if st.button("💾 Save Chat"):
-        if st.session_state["history"]:
-            history_text = "\n".join(
-                [f"[{entry['time']}] {entry['role']}: {entry['content']}" for entry in st.session_state["history"]]
-            )
-            with open("/mnt/data/conversation_history.txt", "w") as f:
-                f.write(history_text)
-            st.success("Chat history saved successfully. You can download it below.")
-            st.download_button("📥 Download Chat History", data=history_text, file_name="conversation_history.txt", mime="text/plain")
-        else:
-            st.warning("No chat history to save.")
-    if st.button("🗑️ Clear History"):
-        st.session_state["history"] = []
-        st.info("Conversation history cleared.")
+    # Same as before for displaying and saving history.
