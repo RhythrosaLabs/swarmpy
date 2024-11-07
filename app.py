@@ -36,17 +36,25 @@ if api_key:
                 st.warning("Agent name must be unique and not empty.")
 
         # Select an agent to edit or delete
-        selected_agent = st.selectbox("Select Agent to Edit", list(st.session_state["agents"].keys()))
-        if selected_agent:
-            st.write(f"Editing {selected_agent}")
-            new_instructions = st.text_area("Update Instructions", st.session_state["agents"][selected_agent]["instructions"])
-            if st.button("Update Instructions"):
-                st.session_state["agents"][selected_agent]["instructions"] = new_instructions
-                st.write(f"Instructions for {selected_agent} updated.")
-
-            if st.button("Delete Agent"):
-                del st.session_state["agents"][selected_agent]
-                st.write(f"Agent '{selected_agent}' deleted.")
+        if st.session_state["agents"]:
+            selected_agent = st.selectbox("Select Agent to Edit", list(st.session_state["agents"].keys()))
+            if selected_agent:
+                st.write(f"Editing {selected_agent}")
+                # Check if selected agent exists and has instructions
+                agent_data = st.session_state["agents"].get(selected_agent)
+                if agent_data and "instructions" in agent_data:
+                    new_instructions = st.text_area("Update Instructions", agent_data["instructions"])
+                    if st.button("Update Instructions"):
+                        st.session_state["agents"][selected_agent]["instructions"] = new_instructions
+                        st.write(f"Instructions for {selected_agent} updated.")
+                else:
+                    st.error("Selected agent not found or missing instructions.")
+                
+                if st.button("Delete Agent"):
+                    del st.session_state["agents"][selected_agent]
+                    st.write(f"Agent '{selected_agent}' deleted.")
+        else:
+            st.write("No agents available. Please add a new agent.")
 
     # Step 3: Define Custom Functions
     with st.sidebar:
