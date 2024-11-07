@@ -42,10 +42,6 @@ if api_key:
 
         for i in range(max_cycles):
             try:
-                # Display conversation being sent for debugging
-                st.write(f"Sending to API: {conversation}")
-
-                # Run the conversation with the current agent
                 response = client.run(agent=current_agent, messages=conversation)
                 response_content = response.messages[-1]["content"]
 
@@ -69,15 +65,15 @@ if api_key:
                 st.error(f"An error occurred with the OpenAI API: {e}")
                 break
 
-    # Step 3: Agent Management in Sidebar
+    # Sidebar Configuration
     with st.sidebar:
         st.header("🤖 Agent Management")
-
+        
         # Preset selection dropdown for Agent A and Agent B
+        st.subheader("Preset Agents")
         agent_a_preset = st.selectbox("Select Preset for Agent A", list(preset_agents.keys()))
         agent_b_preset = st.selectbox("Select Preset for Agent B", list(preset_agents.keys()))
 
-        # Button to add agents based on presets
         if st.button("Add Preset Agents"):
             agent_a_name = "Agent A"
             agent_b_name = "Agent B"
@@ -89,12 +85,18 @@ if api_key:
                 st.session_state["agents"][agent_b_name] = Agent(name=agent_b_name, instructions=preset_agents[agent_b_preset])
             st.write(f"Agents '{agent_a_name}' and '{agent_b_name}' added with presets.")
 
-        # Display current agents and allow viewing instructions
-        st.subheader("Current Agents")
-        for agent_name, agent in st.session_state["agents"].items():
-            st.write(f"**{agent_name}**: {agent.instructions}")
+        # Custom agent creation
+        st.subheader("Custom Agents")
+        custom_agent_name = st.text_input("Custom Agent Name")
+        custom_agent_instructions = st.text_area("Custom Agent Instructions", "Provide specific instructions for the agent.")
+        if st.button("Add Custom Agent"):
+            if custom_agent_name and custom_agent_name not in st.session_state["agents"]:
+                st.session_state["agents"][custom_agent_name] = Agent(name=custom_agent_name, instructions=custom_agent_instructions)
+                st.write(f"Custom agent '{custom_agent_name}' added.")
+            else:
+                st.warning("Agent name must be unique and not empty.")
 
-    # Step 4: Conversation Control
+    # Step 3: Conversation Control
     st.subheader("Automated Conversation Control")
     user_input = st.text_input("💬 Enter your initial message to start the conversation:")
     max_cycles = st.slider("🔄 Set Maximum Cycles", min_value=1, max_value=20, value=5)
@@ -108,10 +110,15 @@ if api_key:
         st.session_state["history"].append({"role": "user", "content": user_input})
         automated_handoff(agent_a, agent_b, user_input, max_cycles=max_cycles)
 
-    # Step 5: Display conversation history
-    st.subheader("📝 Conversation History")
+    # Step 4: Display chat-style conversation history
+    st.subheader("💬 Conversation History")
     for entry in st.session_state["history"]:
-        st.write(f"{entry['role']}: {entry['content']}")
+        if entry["role"] == "user":
+            st.markdown(f"<div style='text-align: right; background-color: #d1e7dd; padding: 10px; border-radius: 10px; margin: 5px;'>"
+                        f"<strong>You:</strong> {entry['content']}</div>", unsafe_allow_html=True)
+        else:
+            st.markdown(f"<div style='text-align: left; background-color: #f8d7da; padding: 10px; border-radius: 10px; margin: 5px;'>"
+                        f"<strong>{entry['role']}:</strong> {entry['content']}</div>", unsafe_allow_html=True)
 
     # Clear conversation history button
     if st.button("🧹 Clear History"):
