@@ -69,16 +69,15 @@ if api_key:
             conversation = [{"role": "user", "content": user_input}]
             current_agent = agent_a
 
-            # Function to convert Agent instance to dictionary
-            def agent_to_dict(agent_instance):
-                return {"name": agent_instance.name, "instructions": agent_instance.instructions}
-
             # Perform turn-based interaction between the two agents
             for turn in range(max_turns):
                 try:
-                    # Convert the Agent instance to a dictionary only for this API call
-                    agent_data = agent_to_dict(current_agent)
-                    response = client.run(agent=agent_data, messages=conversation)
+                    # Debug: Check agent details before passing to API
+                    st.write(f"Running turn {turn+1} with agent: {current_agent.name}")
+                    st.write(f"Agent instructions: {current_agent.instructions}")
+
+                    # Call the Swarm API with the Agent instance directly
+                    response = client.run(agent=current_agent, messages=conversation)
                     response_content = response.messages[-1]["content"]
                     
                     # Update and display conversation history
