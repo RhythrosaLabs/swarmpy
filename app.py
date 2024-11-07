@@ -1,17 +1,16 @@
 import streamlit as st
 from swarm import Swarm, Agent
 import os
+import openai
 
 # Set up session state for agents, conversation history, and back-and-forth control
 if "agents" not in st.session_state:
     st.session_state["agents"] = {}
 if "history" not in st.session_state:
     st.session_state["history"] = []
-if "custom_functions" not in st.session_state:
-    st.session_state["custom_functions"] = {}
 
 # Title for the app
-st.title("Automated Swarm Multi-Agent Interaction Interface")
+st.title("Automated Swarm Multi-Agent Interaction Interface with Enhanced Debugging")
 
 # Step 1: API Key Input
 api_key = st.text_input("Enter your OpenAI API Key:", type="password")
@@ -32,25 +31,34 @@ if api_key:
         client = Swarm()
         current_agent = agent_a
         conversation = [{"role": "user", "content": user_input}]
-        
+
         for i in range(max_cycles):
-            # Run the conversation with the current agent
-            response = client.run(agent=current_agent, messages=conversation)
-            response_content = response.messages[-1]["content"]
-            
-            # Log response in session history
-            st.session_state["history"].append({"role": current_agent.name, "content": response_content})
-            
-            # Display the response in Streamlit
-            st.write(f"**{current_agent.name} says:** {response_content}")
-            
-            # Prepare next agent and update conversation
-            conversation.append({"role": current_agent.name, "content": response_content})
-            current_agent = agent_b if current_agent == agent_a else agent_a
-            
-            # Optionally break out if a condition is met (e.g., keyword or end token)
-            if "goodbye" in response_content.lower():
-                st.write("Ending conversation based on 'goodbye' keyword.")
+            try:
+                # Print the conversation for debugging
+                st.write(f"Sending to API: {conversation}")
+                
+                # Run the conversation with the current agent
+                response = client.run(agent=current_agent, messages=conversation)
+                response_content = response.messages[-1]["content"]
+                
+                # Log response in session history
+                st.session_state["history"].append({"role": current_agent.name, "content": response_content})
+                st.write(f"**{current_agent.name} says:** {response_content}")
+
+                # Prepare next agent and update conversation
+                conversation.append({"role": current_agent.name, "content": response_content})
+                current_agent = agent_b if current_agent == agent_a else agent_a
+                
+                # Check for a termination condition
+                if "goodbye" in response_content.lower():
+                    st.write("Ending conversation based on 'goodbye' keyword.")
+                    break
+
+            except openai.error.InvalidRequestError as e:
+                st.error(f"Error with the OpenAI API request: {e}")
+                break
+            except openai.error.OpenAIError as e:
+                st.error(f"An error occurred with the OpenAI API: {e}")
                 break
 
     # Step 3: Agent Management in Sidebar
