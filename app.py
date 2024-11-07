@@ -1,9 +1,8 @@
 import streamlit as st
 from swarm import Swarm, Agent
 import os
-import json
 
-# Set up session state for agents and conversation history
+# Set up session state for agents, conversation history, and back-and-forth control
 if "agents" not in st.session_state:
     st.session_state["agents"] = {}
 if "history" not in st.session_state:
@@ -12,18 +11,53 @@ if "custom_functions" not in st.session_state:
     st.session_state["custom_functions"] = {}
 
 # Title for the app
-st.title("Advanced Swarm Multi-Agent Interface with File & Function Control")
+st.title("Automated Swarm Multi-Agent Interaction Interface")
 
 # Step 1: API Key Input
 api_key = st.text_input("Enter your OpenAI API Key:", type="password")
 if api_key:
     os.environ['OPENAI_API_KEY'] = api_key
 
-    # Step 2: Agent Management
+    # Step 2: Define Agent Handoff
+    def automated_handoff(agent_a, agent_b, user_input, max_cycles=5):
+        """
+        Automates conversation back-and-forth between two agents.
+        
+        Parameters:
+        - agent_a: First agent to start the conversation.
+        - agent_b: Second agent to receive handoff.
+        - user_input: Initial input from the user.
+        - max_cycles: Maximum number of back-and-forth exchanges.
+        """
+        client = Swarm()
+        current_agent = agent_a
+        conversation = [{"role": "user", "content": user_input}]
+        
+        for i in range(max_cycles):
+            # Run the conversation with the current agent
+            response = client.run(agent=current_agent, messages=conversation)
+            response_content = response.messages[-1]["content"]
+            
+            # Log response in session history
+            st.session_state["history"].append({"role": current_agent.name, "content": response_content})
+            
+            # Display the response in Streamlit
+            st.write(f"**{current_agent.name} says:** {response_content}")
+            
+            # Prepare next agent and update conversation
+            conversation.append({"role": current_agent.name, "content": response_content})
+            current_agent = agent_b if current_agent == agent_a else agent_a
+            
+            # Optionally break out if a condition is met (e.g., keyword or end token)
+            if "goodbye" in response_content.lower():
+                st.write("Ending conversation based on 'goodbye' keyword.")
+                break
+
+    # Step 3: Agent Management in Sidebar
     with st.sidebar:
         st.header("Manage Agents")
         
-        # Add a new agent
+        # Add new agents or update instructions
         agent_name = st.text_input("New Agent Name")
         agent_instructions = st.text_area("New Agent Instructions", "Provide specific instructions for the agent.")
         if st.button("Add Agent"):
@@ -33,67 +67,32 @@ if api_key:
             else:
                 st.warning("Agent name must be unique and not empty.")
 
-        # Select an agent to edit or delete
-        selected_agent = st.selectbox("Select Agent to Edit", list(st.session_state["agents"].keys()))
-        if selected_agent:
-            st.write(f"Editing {selected_agent}")
-            new_instructions = st.text_area("Update Instructions", st.session_state["agents"][selected_agent].instructions)
-            if st.button("Update Instructions"):
-                st.session_state["agents"][selected_agent].instructions = new_instructions
-                st.write(f"Instructions for {selected_agent} updated.")
+        # Select two agents for back-and-forth interaction
+        agent_a_name = st.selectbox("Select Agent A", list(st.session_state["agents"].keys()))
+        agent_b_name = st.selectbox("Select Agent B", list(st.session_state["agents"].keys()))
 
-            if st.button("Delete Agent"):
-                del st.session_state["agents"][selected_agent]
-                st.write(f"Agent '{selected_agent}' deleted.")
+    # Step 4: Conversation Control
+    st.subheader("Automated Conversation Control")
+    user_input = st.text_input("Enter your initial message to start the conversation:")
+    max_cycles = st.slider("Set Maximum Cycles", min_value=1, max_value=20, value=5)
 
-    # Step 3: Define Custom Functions
-    with st.sidebar:
-        st.header("Define Custom Functions")
-        function_name = st.text_input("Function Name")
-        function_code = st.text_area("Function Code", "def custom_function():\n    return 'Your code here'")
+    if st.button("Start Automated Interaction") and agent_a_name and agent_b_name:
+        agent_a = st.session_state["agents"][agent_a_name]
+        agent_b = st.session_state["agents"][agent_b_name]
         
-        if st.button("Add Function"):
-            try:
-                exec(function_code, globals())
-                st.session_state["custom_functions"][function_name] = eval(function_name)
-                st.write(f"Function '{function_name}' added.")
-            except Exception as e:
-                st.error(f"Error in function definition: {e}")
+        # Start automated conversation between the selected agents
+        st.write("**Starting automated interaction...**")
+        st.session_state["history"].append({"role": "user", "content": user_input})
+        automated_handoff(agent_a, agent_b, user_input, max_cycles=max_cycles)
 
-    # Step 4: File Management
-    st.subheader("File Management")
-    uploaded_file = st.file_uploader("Upload a file", type=["txt", "json"])
-    if uploaded_file:
-        content = uploaded_file.read()
-        st.write("Uploaded File Content:", content.decode("utf-8"))
-        st.session_state["history"].append({"role": "file", "content": content.decode("utf-8")})
-
-    # Button to create a new file from conversation history
-    if st.button("Save Conversation History to File"):
-        with open("conversation_history.txt", "w") as file:
-            for msg in st.session_state["history"]:
-                file.write(f"{msg['role']}: {msg['content']}\n")
-        st.write("Conversation history saved to 'conversation_history.txt'.")
-
-    # Step 5: Conversation Interaction
-    st.subheader("Interact with Agents")
-    conversation_input = st.text_input("Enter your message:")
-    if st.button("Send Message"):
-        if conversation_input and selected_agent:
-            # Run conversation with the selected agent
-            agent = st.session_state["agents"][selected_agent]
-            client = Swarm()
-            response = client.run(agent=agent, messages=[{"role": "user", "content": conversation_input}])
-            st.session_state["history"].append({"role": "user", "content": conversation_input})
-            st.session_state["history"].append({"role": agent.name, "content": response.messages[-1]["content"]})
-            st.write(f"{agent.name} says: {response.messages[-1]['content']}")
-
-    # Display conversation history
+    # Step 5: Display conversation history
     st.subheader("Conversation History")
     for entry in st.session_state["history"]:
         st.write(f"{entry['role']}: {entry['content']}")
 
-    # Button to clear conversation history
+    # Clear conversation history button
     if st.button("Clear History"):
         st.session_state["history"] = []
         st.write("Conversation history cleared.")
+else:
+    st.warning("Please enter your OpenAI API key to proceed.")
