@@ -18,12 +18,41 @@ api_key = st.text_input("Enter your OpenAI API Key:", type="password", help="You
 if api_key:
     os.environ['OPENAI_API_KEY'] = api_key
 
+    # Sidebar for Agent Management
+    with st.sidebar:
+        st.header("👥 Agent Management")
+
+        # Add a new agent
+        agent_name = st.text_input("Agent Name", help="Provide a unique name for the agent.")
+        agent_instructions = st.text_area("Agent Instructions", "Provide specific instructions for this agent.", help="Describe the agent's purpose or behavior.")
+        if st.button("➕ Add Agent", key="add_agent"):
+            if agent_name and agent_name not in st.session_state["agent_configs"]:
+                st.session_state["agent_configs"][agent_name] = {"name": agent_name, "instructions": agent_instructions}
+                st.success(f"Agent '{agent_name}' added successfully!")
+            else:
+                st.warning("Agent name must be unique and not empty.")
+
+        # Edit existing agent with dropdown selection
+        if st.session_state["agent_configs"]:
+            selected_agent = st.selectbox("Select Agent to Edit", list(st.session_state["agent_configs"].keys()), help="Select an agent to update or delete.")
+            if selected_agent:
+                agent_config = st.session_state["agent_configs"][selected_agent]
+                new_instructions = st.text_area("Update Instructions", agent_config["instructions"], help="Update the agent's instructions.")
+                if st.button("💾 Update Instructions", key="update_agent"):
+                    st.session_state["agent_configs"][selected_agent]["instructions"] = new_instructions
+                    st.success(f"Instructions for '{selected_agent}' updated.")
+                if st.button("❌ Delete Agent", key="delete_agent"):
+                    del st.session_state["agent_configs"][selected_agent]
+                    st.warning(f"Agent '{selected_agent}' deleted.")
+        else:
+            st.info("No agents available. Please add a new agent.")
+
     # Step 2: Collaboration Setup
     st.subheader("🤝 Step 2: Collaboration Setup")
     if len(st.session_state["agent_configs"]) >= 2:
         # Select two agents for interaction
-        agent_a_name = st.selectbox("Select Agent A", list(st.session_state["agent_configs"].keys()))
-        agent_b_name = st.selectbox("Select Agent B", [name for name in st.session_state["agent_configs"].keys() if name != agent_a_name])
+        agent_a_name = st.selectbox("Select Agent A", list(st.session_state["agent_configs"].keys()), key="agent_a")
+        agent_b_name = st.selectbox("Select Agent B", [name for name in st.session_state["agent_configs"].keys() if name != agent_a_name], key="agent_b")
         
         # Set up task number slider
         max_turns = st.slider("🔄 Number of Turns", min_value=1, max_value=10, value=5, help="Set the maximum number of turns between the agents.")
