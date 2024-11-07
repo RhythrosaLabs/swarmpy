@@ -25,7 +25,7 @@ if api_key:
         agent_instructions = st.text_area("New Agent Instructions", "Provide specific instructions for this agent.")
         if st.button("Add Agent"):
             if agent_name and agent_name not in st.session_state["agent_configs"]:
-                # Store agent configuration in session state
+                # Store agent configuration in session state as a dictionary (not as an Agent instance)
                 st.session_state["agent_configs"][agent_name] = {
                     "name": agent_name,
                     "instructions": agent_instructions
@@ -63,7 +63,7 @@ if api_key:
         
         # Start interaction
         if st.button("Start Collaborative Interaction"):
-            # Reconstruct Agent instances from configurations
+            # Reconstruct Agent instances from configurations for the interaction
             agent_a_config = st.session_state["agent_configs"][agent_a_name]
             agent_b_config = st.session_state["agent_configs"][agent_b_name]
             agent_a = Agent(name=agent_a_config["name"], instructions=agent_a_config["instructions"])
@@ -78,13 +78,8 @@ if api_key:
             # Perform turn-based interaction between the two agents
             for turn in range(max_turns):
                 try:
-                    # Create message with the role "assistant" and use the agent's name
-                    agent_data = {
-                        "role": "assistant",
-                        "name": current_agent.name,  # Use the agent's name for differentiation
-                        "content": current_agent.instructions  # Generate initial content
-                    }
-                    response = client.run(agent=agent_data, messages=conversation)
+                    # Run the Swarm client with the actual Agent instance (not a dictionary)
+                    response = client.run(agent=current_agent, messages=conversation)
                     response_content = response.messages[-1]["content"]
                     
                     # Update and display conversation history
