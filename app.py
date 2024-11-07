@@ -18,44 +18,20 @@ api_key = st.text_input("Enter your OpenAI API Key:", type="password", help="You
 if api_key:
     os.environ['OPENAI_API_KEY'] = api_key
 
-    # Step 2: Agent Management with user-friendly layout
-    with st.sidebar:
-        st.header("👥 Agent Management")
-
-        # Add a new agent
-        agent_name = st.text_input("Agent Name", help="Provide a unique name for the agent.")
-        agent_instructions = st.text_area("Agent Instructions", "Provide specific instructions for this agent.", help="Describe the agent's purpose or behavior.")
-        if st.button("➕ Add Agent"):
-            if agent_name and agent_name not in st.session_state["agent_configs"]:
-                st.session_state["agent_configs"][agent_name] = {"name": agent_name, "instructions": agent_instructions}
-                st.success(f"Agent '{agent_name}' added successfully!")
-            else:
-                st.warning("Agent name must be unique and not empty.")
-
-        # Edit existing agent with dropdown selection
-        if st.session_state["agent_configs"]:
-            selected_agent = st.selectbox("Select Agent to Edit", list(st.session_state["agent_configs"].keys()), help="Select an agent to update or delete.")
-            if selected_agent:
-                agent_config = st.session_state["agent_configs"][selected_agent]
-                new_instructions = st.text_area("Update Instructions", agent_config["instructions"], help="Update the agent's instructions.")
-                if st.button("💾 Update Instructions"):
-                    st.session_state["agent_configs"][selected_agent]["instructions"] = new_instructions
-                    st.success(f"Instructions for '{selected_agent}' updated.")
-                if st.button("❌ Delete Agent"):
-                    del st.session_state["agent_configs"][selected_agent]
-                    st.warning(f"Agent '{selected_agent}' deleted.")
-        else:
-            st.info("No agents available. Please add a new agent.")
-
-    # Step 3: Collaborative Interaction Setup with dynamic agent selection
-    st.subheader("🤝 Step 3: Collaborative Interaction Setup")
+    # Step 2: Collaboration Setup
+    st.subheader("🤝 Step 2: Collaboration Setup")
     if len(st.session_state["agent_configs"]) >= 2:
-        # Select agents and set up conversation parameters
+        # Select two agents for interaction
         agent_a_name = st.selectbox("Select Agent A", list(st.session_state["agent_configs"].keys()))
         agent_b_name = st.selectbox("Select Agent B", [name for name in st.session_state["agent_configs"].keys() if name != agent_a_name])
-        user_input = st.text_input("💬 Initial User Message:", help="Start the conversation by entering an initial message.")
+        
+        # Set up task number slider
         max_turns = st.slider("🔄 Number of Turns", min_value=1, max_value=10, value=5, help="Set the maximum number of turns between the agents.")
-
+        
+        # Step 3: Initial Prompt for Conversation
+        st.subheader("💬 Step 3: Initial Prompt")
+        user_input = st.text_input("Enter Initial User Message:", help="Start the conversation by entering an initial message.")
+        
         # Start interaction button with confirmation
         if st.button("🚀 Start Collaborative Interaction"):
             # Reconstruct Agent instances for the interaction
@@ -109,6 +85,20 @@ if api_key:
                 unsafe_allow_html=True
             )
 
+    # Save conversation history button
+    if st.button("💾 Save Chat"):
+        if st.session_state["history"]:
+            # Prepare history as text
+            history_text = "\n".join(
+                [f"[{entry['time']}] {entry['role']}: {entry['content']}" for entry in st.session_state["history"]]
+            )
+            # Write history to a file
+            with open("/mnt/data/conversation_history.txt", "w") as f:
+                f.write(history_text)
+            st.success("Chat history saved successfully. You can download it below.")
+            st.download_button("📥 Download Chat History", data=history_text, file_name="conversation_history.txt", mime="text/plain")
+        else:
+            st.warning("No chat history to save.")
 
     # Clear conversation history button
     if st.button("🗑️ Clear History"):
