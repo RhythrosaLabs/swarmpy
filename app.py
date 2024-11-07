@@ -38,6 +38,7 @@ if api_key:
                 agent = st.session_state["agents"][selected_agent]
                 new_instructions = st.text_area("Update Instructions", agent.instructions)
                 if st.button("Update Instructions"):
+                    # Update the agent in session state with new instructions
                     st.session_state["agents"][selected_agent] = Agent(name=selected_agent, instructions=new_instructions)
                     st.success(f"Instructions for '{selected_agent}' updated.")
                 if st.button("Delete Agent"):
@@ -75,7 +76,7 @@ if api_key:
             # Perform turn-based interaction between the two agents
             for turn in range(max_turns):
                 try:
-                    # Call the Swarm API with serialized agent data
+                    # Convert the Agent instance to a dictionary only for this API call
                     agent_data = agent_to_dict(current_agent)
                     response = client.run(agent=agent_data, messages=conversation)
                     response_content = response.messages[-1]["content"]
