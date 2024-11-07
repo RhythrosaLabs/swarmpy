@@ -2,9 +2,9 @@ import streamlit as st
 from swarm import Swarm, Agent
 import os
 
-# Set up session state for agents and conversation history
-if "agents" not in st.session_state:
-    st.session_state["agents"] = {}
+# Set up session state for agent configurations and conversation history
+if "agent_configs" not in st.session_state:
+    st.session_state["agent_configs"] = {}
 if "history" not in st.session_state:
     st.session_state["history"] = []
 
@@ -24,36 +24,38 @@ if api_key:
         agent_name = st.text_input("New Agent Name")
         agent_instructions = st.text_area("New Agent Instructions", "Provide specific instructions for this agent.")
         if st.button("Add Agent"):
-            if agent_name and agent_name not in st.session_state["agents"]:
-                # Store agent as an Agent instance in session state without converting to a dictionary
-                new_agent = Agent(name=agent_name, instructions=agent_instructions)
-                st.session_state["agents"][agent_name] = new_agent
+            if agent_name and agent_name not in st.session_state["agent_configs"]:
+                # Store agent configuration in session state
+                st.session_state["agent_configs"][agent_name] = {
+                    "name": agent_name,
+                    "instructions": agent_instructions
+                }
                 st.success(f"Agent '{agent_name}' added.")
             else:
                 st.warning("Agent name must be unique and not empty.")
 
         # Edit existing agent
-        if st.session_state["agents"]:
-            selected_agent = st.selectbox("Select Agent to Edit", list(st.session_state["agents"].keys()))
+        if st.session_state["agent_configs"]:
+            selected_agent = st.selectbox("Select Agent to Edit", list(st.session_state["agent_configs"].keys()))
             if selected_agent:
-                agent = st.session_state["agents"][selected_agent]
-                new_instructions = st.text_area("Update Instructions", agent.instructions)
+                agent_config = st.session_state["agent_configs"][selected_agent]
+                new_instructions = st.text_area("Update Instructions", agent_config["instructions"])
                 if st.button("Update Instructions"):
-                    # Update the agent instructions directly on the instance
-                    st.session_state["agents"][selected_agent].instructions = new_instructions
+                    # Update the agent configuration in session state
+                    st.session_state["agent_configs"][selected_agent]["instructions"] = new_instructions
                     st.success(f"Instructions for '{selected_agent}' updated.")
                 if st.button("Delete Agent"):
-                    del st.session_state["agents"][selected_agent]
+                    del st.session_state["agent_configs"][selected_agent]
                     st.success(f"Agent '{selected_agent}' deleted.")
         else:
             st.info("No agents available. Please add a new agent.")
 
     # Step 3: Collaborative Interaction Setup
     st.subheader("Collaborative Interaction")
-    if len(st.session_state["agents"]) >= 2:
+    if len(st.session_state["agent_configs"]) >= 2:
         # Select two agents for interaction
-        agent_a_name = st.selectbox("Select Agent A", list(st.session_state["agents"].keys()))
-        agent_b_name = st.selectbox("Select Agent B", [name for name in st.session_state["agents"].keys() if name != agent_a_name])
+        agent_a_name = st.selectbox("Select Agent A", list(st.session_state["agent_configs"].keys()))
+        agent_b_name = st.selectbox("Select Agent B", [name for name in st.session_state["agent_configs"].keys() if name != agent_a_name])
         
         # Settings for back-and-forth interaction
         user_input = st.text_input("💬 Initial User Message:")
@@ -61,8 +63,11 @@ if api_key:
         
         # Start interaction
         if st.button("Start Collaborative Interaction"):
-            agent_a = st.session_state["agents"][agent_a_name]
-            agent_b = st.session_state["agents"][agent_b_name]
+            # Reconstruct Agent instances from configurations
+            agent_a_config = st.session_state["agent_configs"][agent_a_name]
+            agent_b_config = st.session_state["agent_configs"][agent_b_name]
+            agent_a = Agent(name=agent_a_config["name"], instructions=agent_a_config["instructions"])
+            agent_b = Agent(name=agent_b_config["name"], instructions=agent_b_config["instructions"])
             client = Swarm()
             st.session_state["history"] = []  # Reset history for new conversation
             
@@ -70,22 +75,10 @@ if api_key:
             conversation = [{"role": "user", "content": user_input}]
             current_agent = agent_a
 
-            # Define a serialization function that converts an Agent instance to a dictionary format
-            def serialize_agent(agent_instance):
-                # Convert Agent instance to the dictionary structure required by Swarm
-                return {
-                    "name": agent_instance.name,
-                    "instructions": agent_instance.instructions,
-                    "model": "gpt-4",  # Example model, change based on requirements
-                    "parallel_tool_calls": False  # Adjust based on your use case
-                }
-
             # Perform turn-based interaction between the two agents
             for turn in range(max_turns):
                 try:
-                    # Serialize the Agent instance to a dictionary for the API call
-                    agent_data = serialize_agent(current_agent)
-                    response = client.run(agent=agent_data, messages=conversation)
+                    response = client.run(agent=current_agent, messages=conversation)
                     response_content = response.messages[-1]["content"]
                     
                     # Update and display conversation history
