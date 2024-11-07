@@ -29,7 +29,7 @@ if "history" not in st.session_state:
     st.session_state["history"] = []
 
 # Title for the app
-st.title("🤖 Collaborative Multi-Agent Interface with Customizable Bots")
+st.title("🤖 Super-Powered Collaborative Swarm Multi-Agent Interface")
 
 # Step 1: API Key Input
 st.subheader("🔐 Step 1: API Key Input")
@@ -42,12 +42,17 @@ if api_key:
         st.header("👥 Agent Management")
 
         # Preset Agent Selection
-        preset_options = ["Image Generator", "Web Scraper", "File Analyzer"]
+        preset_options = ["Text-Based", "Image Generator", "Web Scraper", "File Analyzer"]
         selected_preset = st.selectbox("Choose a Preset Agent", preset_options, help="Select a type of agent to configure.")
 
         # Customize parameters based on selected preset
         agent_name = st.text_input("Agent Name", help="Provide a unique name for the agent.")
-        if selected_preset == "Image Generator":
+        if selected_preset == "Text-Based":
+            model = st.selectbox("Model", ["gpt-4", "gpt-3.5-turbo"], help="Select the model version.")
+            temperature = st.slider("Temperature", 0.0, 1.0, 0.7, help="Set the creativity level of the responses.")
+            agent_instructions = f"Generate text-based responses using {model} with a temperature of {temperature}."
+
+        elif selected_preset == "Image Generator":
             prompt = st.text_input("Image Generation Prompt", help="Enter a prompt for DALL-E to create an image.")
             model = st.selectbox("Model", ["dalle-3", "dalle-2"], help="Select the model version.")
             agent_instructions = f"Generate images based on the prompt '{prompt}' using {model}."
@@ -68,8 +73,9 @@ if api_key:
                     "name": agent_name,
                     "type": selected_preset,
                     "parameters": {
+                        "model": model if selected_preset == "Text-Based" else None,
+                        "temperature": temperature if selected_preset == "Text-Based" else None,
                         "prompt": prompt if selected_preset == "Image Generator" else None,
-                        "model": model if selected_preset == "Image Generator" else None,
                         "url": url if selected_preset == "Web Scraper" else None,
                         "scrape_depth": scrape_depth if selected_preset == "Web Scraper" else None,
                         "file_type": file_type if selected_preset == "File Analyzer" else None
@@ -132,4 +138,4 @@ if api_key:
 
     # Conversation History and Save/Load
     st.subheader("📜 Conversation History")
-    # Same as before for displaying and saving history.
+    # Display and save history as before
