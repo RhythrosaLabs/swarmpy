@@ -27,7 +27,10 @@ if api_key:
         agent_instructions = st.text_area("New Agent Instructions", "Provide specific instructions for the agent.")
         if st.button("Add Agent"):
             if agent_name and agent_name not in st.session_state["agents"]:
-                st.session_state["agents"][agent_name] = Agent(name=agent_name, instructions=agent_instructions)
+                st.session_state["agents"][agent_name] = {
+                    "name": agent_name,
+                    "instructions": agent_instructions
+                }
                 st.write(f"Agent '{agent_name}' added.")
             else:
                 st.warning("Agent name must be unique and not empty.")
@@ -36,9 +39,9 @@ if api_key:
         selected_agent = st.selectbox("Select Agent to Edit", list(st.session_state["agents"].keys()))
         if selected_agent:
             st.write(f"Editing {selected_agent}")
-            new_instructions = st.text_area("Update Instructions", st.session_state["agents"][selected_agent].instructions)
+            new_instructions = st.text_area("Update Instructions", st.session_state["agents"][selected_agent]["instructions"])
             if st.button("Update Instructions"):
-                st.session_state["agents"][selected_agent].instructions = new_instructions
+                st.session_state["agents"][selected_agent]["instructions"] = new_instructions
                 st.write(f"Instructions for {selected_agent} updated.")
 
             if st.button("Delete Agent"):
@@ -83,18 +86,18 @@ if api_key:
             # Validate input message structure
             messages = [{"role": "user", "content": conversation_input}]
             if all(isinstance(msg.get("role"), str) and isinstance(msg.get("content"), str) for msg in messages):
-                # Run conversation with the selected agent
-                agent = st.session_state["agents"][selected_agent]
+                # Run conversation with the selected agent (as a dictionary)
+                agent_data = st.session_state["agents"][selected_agent]
                 client = Swarm()
                 try:
-                    response = client.run(agent=agent, messages=messages)
+                    response = client.run(agent=agent_data, messages=messages)
                     # Log response to check structure
                     st.write("API Response:", response)
 
                     # Update conversation history with valid response
                     st.session_state["history"].append({"role": "user", "content": conversation_input})
-                    st.session_state["history"].append({"role": agent.name, "content": response.messages[-1]["content"]})
-                    st.write(f"{agent.name} says: {response.messages[-1]['content']}")
+                    st.session_state["history"].append({"role": agent_data["name"], "content": response.messages[-1]["content"]})
+                    st.write(f"{agent_data['name']} says: {response.messages[-1]['content']}")
                 except Exception as e:
                     st.error(f"An error occurred during the API request: {e}")
             else:
