@@ -1,79 +1,99 @@
 import streamlit as st
 from swarm import Swarm, Agent
 import os
+import json
+
+# Set up session state for agents and conversation history
+if "agents" not in st.session_state:
+    st.session_state["agents"] = {}
+if "history" not in st.session_state:
+    st.session_state["history"] = []
+if "custom_functions" not in st.session_state:
+    st.session_state["custom_functions"] = {}
 
 # Title for the app
-st.title("Enhanced Swarm Multi-Agent Chat Interface")
+st.title("Advanced Swarm Multi-Agent Interface with File & Function Control")
 
 # Step 1: API Key Input
 api_key = st.text_input("Enter your OpenAI API Key:", type="password")
-
-# Proceed only if an API key is entered
 if api_key:
     os.environ['OPENAI_API_KEY'] = api_key
 
-    # Step 2: Define agent handoff function
-    def handoff_to_agent_b():
-        return agent_b
-
-    # Step 3: Initialize agents
-    agent_a = Agent(
-        name="Agent A",
-        instructions="You are a helpful agent.",
-        functions=[handoff_to_agent_b],
-    )
-
-    agent_b = Agent(
-        name="Agent B",
-        instructions="Only speak in Haikus.",
-    )
-
-    client = Swarm()
-
-    # Step 4: Additional User Controls
+    # Step 2: Agent Management
     with st.sidebar:
-        st.header("Agent Configuration")
-        selected_agent = st.selectbox("Choose an agent to start the conversation:", ["Agent A", "Agent B"])
-        agent_instructions = st.text_area("Customize agent instructions:", "You are a helpful agent.")
+        st.header("Manage Agents")
+        
+        # Add a new agent
+        agent_name = st.text_input("New Agent Name")
+        agent_instructions = st.text_area("New Agent Instructions", "Provide specific instructions for the agent.")
+        if st.button("Add Agent"):
+            if agent_name and agent_name not in st.session_state["agents"]:
+                st.session_state["agents"][agent_name] = Agent(name=agent_name, instructions=agent_instructions)
+                st.write(f"Agent '{agent_name}' added.")
+            else:
+                st.warning("Agent name must be unique and not empty.")
 
-        # Apply new instructions based on user input
-        if selected_agent == "Agent A":
-            agent_a.instructions = agent_instructions
-        else:
-            agent_b.instructions = agent_instructions
+        # Select an agent to edit or delete
+        selected_agent = st.selectbox("Select Agent to Edit", list(st.session_state["agents"].keys()))
+        if selected_agent:
+            st.write(f"Editing {selected_agent}")
+            new_instructions = st.text_area("Update Instructions", st.session_state["agents"][selected_agent].instructions)
+            if st.button("Update Instructions"):
+                st.session_state["agents"][selected_agent].instructions = new_instructions
+                st.write(f"Instructions for {selected_agent} updated.")
 
-    # Step 5: Initialize conversation history
-    if "history" not in st.session_state:
-        st.session_state["history"] = []
+            if st.button("Delete Agent"):
+                del st.session_state["agents"][selected_agent]
+                st.write(f"Agent '{selected_agent}' deleted.")
 
-    # Step 6: Input area for user's message
-    user_input = st.text_input("Enter your message:")
+    # Step 3: Define Custom Functions
+    with st.sidebar:
+        st.header("Define Custom Functions")
+        function_name = st.text_input("Function Name")
+        function_code = st.text_area("Function Code", "def custom_function():\n    return 'Your code here'")
+        
+        if st.button("Add Function"):
+            try:
+                exec(function_code, globals())
+                st.session_state["custom_functions"][function_name] = eval(function_name)
+                st.write(f"Function '{function_name}' added.")
+            except Exception as e:
+                st.error(f"Error in function definition: {e}")
 
-    # Step 7: Button to submit the message
-    if st.button("Send"):
-        if user_input:
-            # Choose the selected agent to start
-            starting_agent = agent_a if selected_agent == "Agent A" else agent_b
+    # Step 4: File Management
+    st.subheader("File Management")
+    uploaded_file = st.file_uploader("Upload a file", type=["txt", "json"])
+    if uploaded_file:
+        content = uploaded_file.read()
+        st.write("Uploaded File Content:", content.decode("utf-8"))
+        st.session_state["history"].append({"role": "file", "content": content.decode("utf-8")})
 
-            # Run the conversation
-            response = client.run(
-                agent=starting_agent,
-                messages=[{"role": "user", "content": user_input}],
-            )
+    # Button to create a new file from conversation history
+    if st.button("Save Conversation History to File"):
+        with open("conversation_history.txt", "w") as file:
+            for msg in st.session_state["history"]:
+                file.write(f"{msg['role']}: {msg['content']}\n")
+        st.write("Conversation history saved to 'conversation_history.txt'.")
 
-            # Update and display conversation history
-            st.session_state["history"].append({"user": user_input, "agent": response.messages[-1]["content"]})
-            user_input = ""  # Clear the input field
+    # Step 5: Conversation Interaction
+    st.subheader("Interact with Agents")
+    conversation_input = st.text_input("Enter your message:")
+    if st.button("Send Message"):
+        if conversation_input and selected_agent:
+            # Run conversation with the selected agent
+            agent = st.session_state["agents"][selected_agent]
+            client = Swarm()
+            response = client.run(agent=agent, messages=[{"role": "user", "content": conversation_input}])
+            st.session_state["history"].append({"role": "user", "content": conversation_input})
+            st.session_state["history"].append({"role": agent.name, "content": response.messages[-1]["content"]})
+            st.write(f"{agent.name} says: {response.messages[-1]['content']}")
 
-    # Step 8: Display conversation history
+    # Display conversation history
     st.subheader("Conversation History")
-    for exchange in st.session_state["history"]:
-        st.write(f"**You**: {exchange['user']}")
-        st.write(f"**{selected_agent}**: {exchange['agent']}")
+    for entry in st.session_state["history"]:
+        st.write(f"{entry['role']}: {entry['content']}")
 
-    # Step 9: Conversation Reset Button
-    if st.button("Reset Conversation"):
+    # Button to clear conversation history
+    if st.button("Clear History"):
         st.session_state["history"] = []
         st.write("Conversation history cleared.")
-else:
-    st.warning("Please enter your OpenAI API key to proceed.")
