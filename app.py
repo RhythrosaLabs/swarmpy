@@ -1,7 +1,6 @@
 import streamlit as st
 from swarm import Swarm, Agent
 import os
-import openai
 
 # Preset agents with instructions
 preset_agents = {
@@ -58,11 +57,8 @@ if api_key:
                     st.write("Ending conversation based on 'goodbye' keyword.")
                     break
 
-            except openai.error.InvalidRequestError as e:
-                st.error(f"Error with the OpenAI API request: {e}")
-                break
-            except openai.error.OpenAIError as e:
-                st.error(f"An error occurred with the OpenAI API: {e}")
+            except Exception as e:
+                st.error(f"An error occurred during the API request: {e}")
                 break
 
     # Sidebar Configuration
