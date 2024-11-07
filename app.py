@@ -78,12 +78,18 @@ if api_key:
             # Perform turn-based interaction between the two agents
             for turn in range(max_turns):
                 try:
-                    response = client.run(agent=current_agent, messages=conversation)
+                    # Create message with the role "assistant" and use the agent's name
+                    agent_data = {
+                        "role": "assistant",
+                        "name": current_agent.name,  # Use the agent's name for differentiation
+                        "content": current_agent.instructions  # Generate initial content
+                    }
+                    response = client.run(agent=agent_data, messages=conversation)
                     response_content = response.messages[-1]["content"]
                     
                     # Update and display conversation history
                     st.session_state["history"].append({"role": current_agent.name, "content": response_content})
-                    conversation.append({"role": current_agent.name, "content": response_content})
+                    conversation.append({"role": "assistant", "name": current_agent.name, "content": response_content})
                     
                     # Toggle between agents
                     current_agent = agent_b if current_agent == agent_a else agent_a
