@@ -1,7 +1,6 @@
 import streamlit as st
 from swarm import Swarm, Agent
 import os
-import json
 
 # Set up session state for agents and conversation history
 if "agents" not in st.session_state:
@@ -72,7 +71,8 @@ if api_key:
     if st.button("Save Conversation History to File"):
         with open("conversation_history.txt", "w") as file:
             for msg in st.session_state["history"]:
-                file.write(f"{msg['role']}: {msg['content']}\n")
+                if "role" in msg and "content" in msg:  # Check if keys exist
+                    file.write(f"{msg['role']}: {msg['content']}\n")
         st.write("Conversation history saved to 'conversation_history.txt'.")
 
     # Step 5: Conversation Interaction
@@ -91,7 +91,10 @@ if api_key:
     # Display conversation history
     st.subheader("Conversation History")
     for entry in st.session_state["history"]:
-        st.write(f"{entry['role']}: {entry['content']}")
+        if "role" in entry and "content" in entry:  # Ensure each entry has required keys
+            st.write(f"{entry['role']}: {entry['content']}")
+        else:
+            st.write("Invalid entry format detected in history.")
 
     # Button to clear conversation history
     if st.button("Clear History"):
