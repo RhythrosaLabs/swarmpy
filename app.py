@@ -91,19 +91,24 @@ if api_key:
                     st.error(f"Error during API call: {e}")
                     break
 
-    # Step 4: Display conversation history with styled messages
+    # Step 4: Display conversation history with styled messages and dark grey background
     st.subheader("📜 Conversation History")
     for entry in st.session_state["history"]:
         # User message style
         if entry["role"] == "user":
-            st.markdown(f"<div style='text-align: right; background-color: #d1e7dd; padding: 10px; border-radius: 10px; margin: 5px;'>"
-                        f"<strong>You:</strong> {entry['content']} <span style='font-size: small; color: #6c757d;'>({entry['time']})</span></div>",
-                        unsafe_allow_html=True)
+            st.markdown(
+                f"<div style='text-align: right; background-color: #1c1c1c; padding: 10px; border-radius: 10px; margin: 5px;'>"
+                f"<strong>You:</strong> {entry['content']} <span style='font-size: small; color: #6c757d;'>({entry['time']})</span></div>",
+                unsafe_allow_html=True
+            )
         # Agent message style
         else:
-            st.markdown(f"<div style='text-align: left; background-color: #f8d7da; padding: 10px; border-radius: 10px; margin: 5px;'>"
-                        f"<strong>{entry['role']}:</strong> {entry['content']} <span style='font-size: small; color: #6c757d;'>({entry['time']})</span></div>",
-                        unsafe_allow_html=True)
+            st.markdown(
+                f"<div style='text-align: left; background-color: #1c1c1c; padding: 10px; border-radius: 10px; margin: 5px;'>"
+                f"<strong>{entry['role']}:</strong> {entry['content']} <span style='font-size: small; color: #6c757d;'>({entry['time']})</span></div>",
+                unsafe_allow_html=True
+            )
+
 
     # Clear conversation history button
     if st.button("🗑️ Clear History"):
