@@ -1,2 +1,3 @@
-streamlit==1.25.0
+streamlit
+requests
 swarm @ git+https://github.com/openai/swarm.git
