@@ -25,8 +25,9 @@ if api_key:
         agent_instructions = st.text_area("New Agent Instructions", "Provide specific instructions for this agent.")
         if st.button("Add Agent"):
             if agent_name and agent_name not in st.session_state["agents"]:
-                # Store agent as an Agent instance in session state
-                st.session_state["agents"][agent_name] = Agent(name=agent_name, instructions=agent_instructions)
+                # Store agent as an Agent instance in session state without converting to a dictionary
+                new_agent = Agent(name=agent_name, instructions=agent_instructions)
+                st.session_state["agents"][agent_name] = new_agent
                 st.success(f"Agent '{agent_name}' added.")
             else:
                 st.warning("Agent name must be unique and not empty.")
@@ -38,8 +39,8 @@ if api_key:
                 agent = st.session_state["agents"][selected_agent]
                 new_instructions = st.text_area("Update Instructions", agent.instructions)
                 if st.button("Update Instructions"):
-                    # Update the agent in session state with new instructions
-                    st.session_state["agents"][selected_agent] = Agent(name=selected_agent, instructions=new_instructions)
+                    # Update the agent instructions directly on the instance
+                    st.session_state["agents"][selected_agent].instructions = new_instructions
                     st.success(f"Instructions for '{selected_agent}' updated.")
                 if st.button("Delete Agent"):
                     del st.session_state["agents"][selected_agent]
