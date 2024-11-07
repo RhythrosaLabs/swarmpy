@@ -69,15 +69,22 @@ if api_key:
             conversation = [{"role": "user", "content": user_input}]
             current_agent = agent_a
 
+            # Define a serialization function that converts an Agent instance to the exact dictionary format expected by Swarm
+            def serialize_agent(agent_instance):
+                # Return a dictionary with fields required by Swarm
+                return {
+                    "name": agent_instance.name,
+                    "instructions": agent_instance.instructions,
+                    "model": "gpt-4",  # Assuming the Swarm library requires model information
+                    "parallel_tool_calls": False  # This is a default field; set it according to your needs
+                }
+
             # Perform turn-based interaction between the two agents
             for turn in range(max_turns):
                 try:
-                    # Debugging information to ensure correct agent is used
-                    st.write(f"Running turn {turn + 1} with agent: {current_agent.name}")
-                    st.write(f"Agent details: Name - {current_agent.name}, Instructions - {current_agent.instructions}")
-
-                    # Call the Swarm API with the Agent instance directly
-                    response = client.run(agent=current_agent, messages=conversation)
+                    # Use the serialized dictionary format for the API call
+                    agent_data = serialize_agent(current_agent)
+                    response = client.run(agent=agent_data, messages=conversation)
                     response_content = response.messages[-1]["content"]
                     
                     # Update and display conversation history
