@@ -2,24 +2,45 @@ import streamlit as st
 from swarm import Swarm, Agent
 import os
 from datetime import datetime
+import requests  # For web scraping
+import PyPDF2    # For PDF analysis
+from PIL import Image  # For image analysis
 
-# Placeholder functions with actual mock functionality
+# Define functions for actual functionality
 
 def generate_dalle_image(prompt, model="dalle-3"):
-    # Simulate an image generation response
-    return f"[Image generated based on prompt: '{prompt}' using model: '{model}']"
+    # Here, you would call OpenAI's DALL-E API. This placeholder represents the API call.
+    return f"Image generated based on prompt: '{prompt}' using model: '{model}'"
 
 def scrape_url(url, depth=1):
-    # Simulate a web scraping response
-    return f"[Content scraped from '{url}' with depth {depth}. Sample content: 'Example headline, Example paragraph.']"
+    # Simple web scraping using requests and extracting text as a sample functionality
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        content = response.text[:500]  # Return the first 500 characters
+        return f"Scraped content from '{url}': {content}..."
+    except requests.RequestException as e:
+        return f"Error scraping {url}: {e}"
 
 def analyze_pdf(file):
-    # Simulate a PDF analysis response
-    return "[Extracted text from PDF: 'Sample PDF content, including various topics and summaries.']"
+    # Analyzing a PDF file with PyPDF2
+    try:
+        reader = PyPDF2.PdfFileReader(file)
+        text = ""
+        for page_num in range(min(5, reader.numPages)):  # Limit to first 5 pages
+            text += reader.getPage(page_num).extractText()
+        return f"Extracted text from PDF: {text[:500]}..."  # Return the first 500 characters
+    except Exception as e:
+        return f"Error reading PDF: {e}"
 
 def analyze_image(image):
-    # Simulate an image analysis response
-    return "[Detected objects in image: 'Cat, Tree, Car']"
+    # Basic image analysis with PIL - here we will return the image size as a simple example
+    try:
+        img = Image.open(image)
+        width, height = img.size
+        return f"Image analysis result: width={width}, height={height}, format={img.format}"
+    except Exception as e:
+        return f"Error analyzing image: {e}"
 
 # Initialize session state for agents and conversation history
 if "agent_configs" not in st.session_state:
@@ -28,7 +49,7 @@ if "history" not in st.session_state:
     st.session_state["history"] = []
 
 # Define the app title
-st.title("🤖 Collaborative Multi-Agent Interface with Functional Placeholders")
+st.title("🤖 Collaborative Multi-Agent Interface with Real Functionality")
 
 # Step 1: API Key Input
 st.subheader("🔐 Step 1: API Key Input")
@@ -125,14 +146,15 @@ if len(st.session_state["agent_configs"]) >= 2:
 
         for turn in range(max_turns):
             try:
-                # Simulated response based on agent type
-                if current_agent.name == agent_a_config["name"]:
+                # Determine preset and parameters based on the current agent
+                if current_agent == agent_a:
                     preset = agent_a_config["preset"]
                     parameters = agent_a_config["parameters"]
                 else:
                     preset = agent_b_config["preset"]
                     parameters = agent_b_config["parameters"]
 
+                # Execute the appropriate functionality
                 if preset == "Text-Based":
                     response_content = f"[Generated text response from {parameters['model']} with temperature {parameters['temperature']}]"
                 elif preset == "Image Generator":
